@@ -3,19 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = env("DATABASE_PROVIDER")
   url      = env("DATABASE_URL")
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  phone      String?
+  address    String?
+  customData String?  // JSON key-value store for custom fields
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  orders     Order[]
 }
 
 model Driver {
@@ -59,9 +60,13 @@ model Order {
   description  String?
   status       String     @default("PENDING") // PENDING | ASSIGNED | IN_TRANSIT | DELIVERED | CANCELLED
   totalCost    Float?
+  customData   String?    // JSON key-value store for custom fields
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   shipment     Shipment?
+  updates      OperationUpdate[]
+  tasks        Task[]
+  documents    Document[]
 }
 
 model Shipment {
@@ -82,9 +87,13 @@ model Shipment {
   pickedUpAt     DateTime?
   deliveredAt    DateTime?
   notes          String?
+  customData     String?   // JSON key-value store for custom fields
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   events         ShipmentEvent[]
+  updates        OperationUpdate[]
+  tasks          Task[]
+  documents      Document[]
 }
 
 model ShipmentEvent {
@@ -95,4 +104,147 @@ model ShipmentEvent {
   note        String?
   location    String?
   createdAt   DateTime @default(now())
+}
+
+model Company {
+  id               String    @id @default(cuid())
+  name             String
+  type             String    // CUSTOMER | SUPPLIER | US_CARRIER | MX_CARRIER | US_CUSTOMS_BROKER | MX_CUSTOMS_BROKER
+  email            String    @unique
+  phone            String?
+  address          String?
+  country          String?
+  taxId            String?
+  onboardingStatus String    @default("PENDING") // PENDING | IN_PROGRESS | APPROVED | REJECTED
+  onboardingData   String?   // JSON blob
+  notes            String?
+  customData       String?   // JSON key-value store for custom fields
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  users            User[]
+  documents        Document[]
+  updates          OperationUpdate[]
+  tasks            Task[]    @relation("CompanyTasks")
+}
+
+model CustomFieldDef {
+  id           String   @id @default(cuid())
+  entityType   String   // ORDER | SHIPMENT | CUSTOMER | COMPANY
+  name         String
+  label        String
+  fieldType    String   // TEXT | NUMBER | DATE | SELECT | BOOLEAN
+  options      String?  // JSON array of strings for SELECT type
+  required     Boolean  @default(false)
+  position     Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@unique([entityType, name])
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("VIEWER") // SUPER_ADMIN | ADMIN | STAFF | MANAGER | PORTAL_USER | VIEWER
+  companyId    String?
+  company      Company?  @relation(fields: [companyId], references: [id])
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  permissions      UserPermission[]
+  createdTasks     Task[]            @relation("TaskCreator")
+  assignedTasks    Task[]            @relation("TaskAssignee")
+  checklistItems   TaskChecklistItem[]
+  documents        Document[]
+  updates          OperationUpdate[]
+}
+
+model UserPermission {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  resource  String  // DASHBOARD | ORDERS | SHIPMENTS | FLEET | CUSTOMERS | COMPANIES | USERS | TASKS | DOCUMENTS | UPDATES
+  canCreate Boolean @default(false)
+  canRead   Boolean @default(true)
+  canUpdate Boolean @default(false)
+  canDelete Boolean @default(false)
+  @@unique([userId, resource])
+}
+
+model OperationUpdate {
+  id         String    @id @default(cuid())
+  shipmentId String?
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id])
+  orderId    String?
+  order      Order?    @relation(fields: [orderId], references: [id])
+  authorId   String
+  author     User      @relation(fields: [authorId], references: [id])
+  companyId  String?
+  company    Company?  @relation(fields: [companyId], references: [id])
+  type       String    // NOTE | STATUS_CHANGE | DOCUMENT_UPLOAD | TASK_UPDATE | CUSTOMS_UPDATE | CARRIER_UPDATE | EXCEPTION | CHECKPOINT
+  content    String
+  visibility String    @default("INTERNAL") // INTERNAL | ALL | CUSTOMER | CARRIER | CUSTOMS_BROKER
+  metadata   String?   // JSON
+  createdAt  DateTime  @default(now())
+}
+
+model Task {
+  id                  String    @id @default(cuid())
+  title               String
+  description         String?
+  assignedToCompanyId String?
+  assignedToCompany   Company?  @relation("CompanyTasks", fields: [assignedToCompanyId], references: [id])
+  assignedToUserId    String?
+  assignedToUser      User?     @relation("TaskAssignee", fields: [assignedToUserId], references: [id])
+  createdByUserId     String
+  createdBy           User      @relation("TaskCreator", fields: [createdByUserId], references: [id])
+  shipmentId          String?
+  shipment            Shipment? @relation(fields: [shipmentId], references: [id])
+  orderId             String?
+  order               Order?    @relation(fields: [orderId], references: [id])
+  status              String    @default("PENDING") // PENDING | IN_PROGRESS | COMPLETED | CANCELLED
+  priority            String    @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
+  dueDate             DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  checklistItems      TaskChecklistItem[]
+}
+
+model TaskChecklistItem {
+  id            String    @id @default(cuid())
+  taskId        String
+  task          Task      @relation(fields: [taskId], references: [id])
+  text          String
+  isCompleted   Boolean   @default(false)
+  completedAt   DateTime?
+  completedById String?
+  completedBy   User?     @relation(fields: [completedById], references: [id])
+  position      Int       @default(0)
+  createdAt     DateTime  @default(now())
+}
+
+model Document {
+  id           String    @id @default(cuid())
+  type         String    // PEDIMENTO | US_CUSTOMS_ENTRY | COMMERCIAL_INVOICE | BOL | PACKING_LIST | CERTIFICATE_OF_ORIGIN | OTHER
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  shipmentId   String?
+  shipment     Shipment? @relation(fields: [shipmentId], references: [id])
+  orderId      String?
+  order        Order?    @relation(fields: [orderId], references: [id])
+  uploadedById String
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id])
+  companyId    String?
+  company      Company?  @relation(fields: [companyId], references: [id])
+  description  String?
+  isPublic     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
 }

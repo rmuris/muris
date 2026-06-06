@@ -2,7 +2,24 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { shipments as shipmentsApi, orders as ordersApi, fleet } from '../api';
 import StatusBadge from '../components/StatusBadge';
+import ColumnManager from '../components/ColumnManager';
+import { useColumnPrefs } from '../hooks/useColumnPrefs';
 import type { Shipment, Order, Driver, Vehicle } from '../types';
+
+const COLUMNS = [
+  { key: 'trackingNo',    label: 'Tracking #' },
+  { key: 'customer',      label: 'Customer' },
+  { key: 'origin',        label: 'Origin' },
+  { key: 'destination',   label: 'Destination' },
+  { key: 'driver',        label: 'Driver' },
+  { key: 'vehicle',       label: 'Vehicle' },
+  { key: 'estimatedDist', label: 'Est. Dist', defaultVisible: false },
+  { key: 'estimatedTime', label: 'Est. Time', defaultVisible: false },
+  { key: 'status',        label: 'Status' },
+  { key: 'createdAt',     label: 'Created',   defaultVisible: false },
+];
+
+const STATUS_FILTERS = ['', 'PENDING', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'];
 
 export default function Shipments() {
   const [list, setList] = useState<Shipment[]>([]);
@@ -12,6 +29,7 @@ export default function Shipments() {
   const [showAssign, setShowAssign] = useState(false);
   const [assignForm, setAssignForm] = useState({ orderId: '', driverId: '', vehicleId: '', notes: '' });
   const [filterStatus, setFilterStatus] = useState('');
+  const { visible, toggle, isVisible } = useColumnPrefs('shipments', COLUMNS);
 
   const load = () => shipmentsApi.list(filterStatus ? { status: filterStatus } : {}).then(setList);
   useEffect(() => { load(); }, [filterStatus]);
@@ -29,86 +47,106 @@ export default function Shipments() {
     ordersApi.list({ status: 'PENDING' }).then(setPendingOrders);
   };
 
-  const statuses = ['', 'PENDING', 'PICKED_UP', 'IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'FAILED'];
-
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Shipments</h2>
-        <button onClick={() => setShowAssign(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">+ Assign Shipment</button>
+        <div>
+          <h1 className="font-heading font-bold text-2xl text-white">Shipments</h1>
+          <p className="text-brand-300 text-sm mt-0.5">{list.length} shipments</p>
+        </div>
+        <div className="flex gap-2">
+          <ColumnManager columns={COLUMNS} visible={visible} onToggle={toggle} />
+          <button onClick={() => setShowAssign(true)} className="btn-primary">+ Assign Shipment</button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        {statuses.map(s => (
+      {/* Status filters */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {STATUS_FILTERS.map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${filterStatus === s ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-400'}`}>
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-150 border ${
+              filterStatus === s
+                ? 'bg-gradient-brand text-white border-transparent shadow-brand'
+                : 'bg-transparent border-white/10 text-brand-300 hover:border-brand-400 hover:text-white'
+            }`}>
             {s || 'All'}
           </button>
         ))}
       </div>
 
+      {/* Assign form */}
       {showAssign && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h3 className="font-semibold mb-4">Assign Shipment</h3>
+        <div className="glass rounded-2xl p-6 mb-6 shadow-card">
+          <h3 className="font-heading font-semibold text-white mb-5">Assign Shipment</h3>
           <div className="grid grid-cols-2 gap-4">
-            <select value={assignForm.orderId} onChange={e => setAssignForm(p => ({ ...p, orderId: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Select pending order...</option>
-              {pendingOrders.map(o => <option key={o.id} value={o.id}>{o.orderNo} — {o.customer.name} ({o.origin} → {o.destination})</option>)}
+            <select value={assignForm.orderId} onChange={e => setAssignForm(p => ({ ...p, orderId: e.target.value }))} className="input-dark">
+              <option value="">Select pending order…</option>
+              {pendingOrders.map(o => <option key={o.id} value={o.id}>{o.orderNo} — {o.customer?.name} ({o.origin} → {o.destination})</option>)}
             </select>
-            <select value={assignForm.driverId} onChange={e => setAssignForm(p => ({ ...p, driverId: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Select available driver...</option>
+            <select value={assignForm.driverId} onChange={e => setAssignForm(p => ({ ...p, driverId: e.target.value }))} className="input-dark">
+              <option value="">Select available driver…</option>
               {drivers.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>
-            <select value={assignForm.vehicleId} onChange={e => setAssignForm(p => ({ ...p, vehicleId: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Select available vehicle...</option>
-              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.make} {v.model} ({v.capacity}t)</option>)}
+            <select value={assignForm.vehicleId} onChange={e => setAssignForm(p => ({ ...p, vehicleId: e.target.value }))} className="input-dark">
+              <option value="">Select available vehicle…</option>
+              {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate} — {v.make} {v.model}</option>)}
             </select>
-            <input placeholder="Notes (optional)" value={assignForm.notes} onChange={e => setAssignForm(p => ({ ...p, notes: e.target.value }))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input placeholder="Notes (optional)" value={assignForm.notes}
+              onChange={e => setAssignForm(p => ({ ...p, notes: e.target.value }))} className="input-dark" />
           </div>
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-3 mt-5">
             <button onClick={assign} disabled={!assignForm.orderId || !assignForm.driverId || !assignForm.vehicleId}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">Assign</button>
-            <button onClick={() => setShowAssign(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200">Cancel</button>
+              className="btn-primary disabled:opacity-40">Assign</button>
+            <button onClick={() => setShowAssign(false)} className="btn-ghost">Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-500 border-b border-gray-100">
-              <th className="px-6 py-3">Tracking #</th>
-              <th className="px-6 py-3">Customer</th>
-              <th className="px-6 py-3">Route</th>
-              <th className="px-6 py-3">Driver</th>
-              <th className="px-6 py-3">Vehicle</th>
-              <th className="px-6 py-3">Est. Dist</th>
-              <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {list.map(s => (
-              <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="px-6 py-3 font-mono text-xs text-blue-600">{s.trackingNo}</td>
-                <td className="px-6 py-3">{s.order.customer.name}</td>
-                <td className="px-6 py-3 text-gray-500 text-xs">{s.origin} → {s.destination}</td>
-                <td className="px-6 py-3">{s.driver?.name ?? '—'}</td>
-                <td className="px-6 py-3 font-mono text-xs">{s.vehicle?.plate ?? '—'}</td>
-                <td className="px-6 py-3">{s.estimatedDist ? `${s.estimatedDist} km` : '—'}</td>
-                <td className="px-6 py-3"><StatusBadge status={s.status} /></td>
-                <td className="px-6 py-3">
-                  <Link to={`/shipments/${s.id}`} className="text-blue-600 hover:underline text-xs">Details</Link>
-                </td>
+      {/* Table */}
+      <div className="glass rounded-2xl shadow-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-white/5">
+                {isVisible('trackingNo')    && <th className="table-header text-left">Tracking #</th>}
+                {isVisible('customer')      && <th className="table-header text-left">Customer</th>}
+                {isVisible('origin')        && <th className="table-header text-left">Origin</th>}
+                {isVisible('destination')   && <th className="table-header text-left">Destination</th>}
+                {isVisible('driver')        && <th className="table-header text-left">Driver</th>}
+                {isVisible('vehicle')       && <th className="table-header text-left">Vehicle</th>}
+                {isVisible('estimatedDist') && <th className="table-header text-left">Dist</th>}
+                {isVisible('estimatedTime') && <th className="table-header text-left">Time</th>}
+                {isVisible('status')        && <th className="table-header text-left">Status</th>}
+                {isVisible('createdAt')     && <th className="table-header text-left">Created</th>}
+                <th className="table-header"></th>
               </tr>
-            ))}
-            {list.length === 0 && <tr><td colSpan={8} className="px-6 py-8 text-center text-gray-400">No shipments found</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {list.map(s => (
+                <tr key={s.id} className="table-row">
+                  {isVisible('trackingNo')    && <td className="table-cell font-mono text-xs text-brand-300">{s.trackingNo}</td>}
+                  {isVisible('customer')      && <td className="table-cell font-medium">{s.order?.customer?.name}</td>}
+                  {isVisible('origin')        && <td className="table-cell text-brand-400 text-xs">{s.origin}</td>}
+                  {isVisible('destination')   && <td className="table-cell text-brand-400 text-xs">{s.destination}</td>}
+                  {isVisible('driver')        && <td className="table-cell">{s.driver?.name ?? <span className="text-brand-500">—</span>}</td>}
+                  {isVisible('vehicle')       && <td className="table-cell font-mono text-xs">{s.vehicle?.plate ?? <span className="text-brand-500">—</span>}</td>}
+                  {isVisible('estimatedDist') && <td className="table-cell">{s.estimatedDist ? `${s.estimatedDist} km` : '—'}</td>}
+                  {isVisible('estimatedTime') && <td className="table-cell">{s.estimatedTime ? `${s.estimatedTime} min` : '—'}</td>}
+                  {isVisible('status')        && <td className="table-cell"><StatusBadge status={s.status} /></td>}
+                  {isVisible('createdAt')     && <td className="table-cell text-brand-400 text-xs">{new Date(s.createdAt).toLocaleDateString()}</td>}
+                  <td className="table-cell text-right">
+                    <Link to={`/shipments/${s.id}`} className="text-xs text-brand-400 hover:text-brand-300 transition-colors">
+                      Details →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {list.length === 0 && (
+                <tr><td colSpan={COLUMNS.length + 1} className="px-6 py-12 text-center text-brand-400">No shipments found</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
