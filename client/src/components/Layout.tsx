@@ -12,6 +12,7 @@ const INTERNAL_NAV = [
   { to: '/documents', label: 'Documents', icon: '📄', resource: 'DOCUMENTS' },
   { to: '/updates', label: 'Updates', icon: '📡', resource: 'UPDATES' },
   { to: '/users', label: 'Users', icon: '🔐', resource: 'USERS' },
+  { to: '/custom-fields', label: 'Custom Fields', icon: '🔧', resource: 'USERS' },
 ];
 
 const PORTAL_NAV = [

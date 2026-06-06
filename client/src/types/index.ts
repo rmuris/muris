@@ -186,6 +186,22 @@ export interface OperationUpdate {
   createdAt: string;
 }
 
+export type CustomFieldType = 'TEXT' | 'NUMBER' | 'DATE' | 'SELECT' | 'BOOLEAN';
+export type CustomFieldEntityType = 'ORDER' | 'SHIPMENT' | 'CUSTOMER' | 'COMPANY';
+
+export interface CustomFieldDef {
+  id: string;
+  entityType: CustomFieldEntityType;
+  name: string;
+  label: string;
+  fieldType: CustomFieldType;
+  options?: string; // JSON string of string[]
+  required: boolean;
+  position: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface Document {
   id: string;
   type: DocumentType;

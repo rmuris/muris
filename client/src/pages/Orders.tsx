@@ -1,7 +1,20 @@
 import { useEffect, useState } from 'react';
 import { orders as ordersApi, customers as customersApi } from '../api';
 import StatusBadge from '../components/StatusBadge';
+import ColumnManager from '../components/ColumnManager';
+import { useColumnPrefs } from '../hooks/useColumnPrefs';
 import type { Order, Customer } from '../types';
+
+const COLUMNS = [
+  { key: 'orderNo',   label: 'Order #' },
+  { key: 'customer',  label: 'Customer' },
+  { key: 'origin',    label: 'Origin' },
+  { key: 'destination', label: 'Destination' },
+  { key: 'weight',    label: 'Weight' },
+  { key: 'totalCost', label: 'Cost' },
+  { key: 'status',    label: 'Status' },
+  { key: 'createdAt', label: 'Created', defaultVisible: false },
+];
 
 const empty = { customerId: '', origin: '', destination: '', weight: '', description: '', totalCost: '' };
 
@@ -11,6 +24,7 @@ export default function Orders() {
   const [form, setForm] = useState(empty);
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
+  const { visible, toggle, isVisible } = useColumnPrefs('orders', COLUMNS);
 
   const load = () => ordersApi.list(filterStatus ? { status: filterStatus } : {}).then(setList);
   useEffect(() => { load(); customersApi.list().then(setCustomerList); }, [filterStatus]);
@@ -20,15 +34,21 @@ export default function Orders() {
     setForm(empty); setShowForm(false); load();
   };
 
-  const del = async (id: string) => { if (confirm('Delete order?')) { await ordersApi.delete(id); load(); } };
+  const del = async (id: string) => {
+    if (confirm('Delete order?')) { await ordersApi.delete(id); load(); }
+  };
 
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Orders</h2>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">+ New Order</button>
+        <div className="flex gap-2">
+          <ColumnManager columns={COLUMNS} visible={visible} onToggle={toggle} />
+          <button onClick={() => setShowForm(true)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">+ New Order</button>
+        </div>
       </div>
 
+      {/* Status filter */}
       <div className="flex gap-2 mb-4">
         {['', 'PENDING', 'ASSIGNED', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'].map(s => (
           <button key={s} onClick={() => setFilterStatus(s)}
@@ -63,28 +83,32 @@ export default function Orders() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-gray-500 border-b border-gray-100">
-              <th className="px-6 py-3">Order #</th>
-              <th className="px-6 py-3">Customer</th>
-              <th className="px-6 py-3">Route</th>
-              <th className="px-6 py-3">Weight</th>
-              <th className="px-6 py-3">Cost</th>
-              <th className="px-6 py-3">Status</th>
+              {isVisible('orderNo')    && <th className="px-6 py-3 font-medium">Order #</th>}
+              {isVisible('customer')   && <th className="px-6 py-3 font-medium">Customer</th>}
+              {isVisible('origin')     && <th className="px-6 py-3 font-medium">Origin</th>}
+              {isVisible('destination')&& <th className="px-6 py-3 font-medium">Destination</th>}
+              {isVisible('weight')     && <th className="px-6 py-3 font-medium">Weight</th>}
+              {isVisible('totalCost')  && <th className="px-6 py-3 font-medium">Cost</th>}
+              {isVisible('status')     && <th className="px-6 py-3 font-medium">Status</th>}
+              {isVisible('createdAt')  && <th className="px-6 py-3 font-medium">Created</th>}
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {list.map(o => (
               <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50">
-                <td className="px-6 py-3 font-mono text-xs">{o.orderNo}</td>
-                <td className="px-6 py-3">{o.customer.name}</td>
-                <td className="px-6 py-3 text-gray-500 text-xs">{o.origin} → {o.destination}</td>
-                <td className="px-6 py-3">{o.weight} t</td>
-                <td className="px-6 py-3">{o.totalCost ? `$${o.totalCost.toLocaleString()}` : '—'}</td>
-                <td className="px-6 py-3"><StatusBadge status={o.status} /></td>
+                {isVisible('orderNo')    && <td className="px-6 py-3 font-mono text-xs">{o.orderNo}</td>}
+                {isVisible('customer')   && <td className="px-6 py-3">{o.customer?.name}</td>}
+                {isVisible('origin')     && <td className="px-6 py-3 text-gray-500 text-xs">{o.origin}</td>}
+                {isVisible('destination')&& <td className="px-6 py-3 text-gray-500 text-xs">{o.destination}</td>}
+                {isVisible('weight')     && <td className="px-6 py-3">{o.weight} t</td>}
+                {isVisible('totalCost')  && <td className="px-6 py-3">{o.totalCost ? `$${o.totalCost.toLocaleString()}` : '—'}</td>}
+                {isVisible('status')     && <td className="px-6 py-3"><StatusBadge status={o.status} /></td>}
+                {isVisible('createdAt')  && <td className="px-6 py-3 text-gray-400 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>}
                 <td className="px-6 py-3">
                   {o.status === 'PENDING' && (
                     <button onClick={() => del(o.id)} className="text-red-500 hover:underline text-xs">Delete</button>
@@ -92,7 +116,9 @@ export default function Orders() {
                 </td>
               </tr>
             ))}
-            {list.length === 0 && <tr><td colSpan={7} className="px-6 py-8 text-center text-gray-400">No orders found</td></tr>}
+            {list.length === 0 && (
+              <tr><td colSpan={COLUMNS.length + 1} className="px-6 py-8 text-center text-gray-400">No orders found</td></tr>
+            )}
           </tbody>
         </table>
       </div>

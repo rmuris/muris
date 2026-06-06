@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Customer, Driver, Vehicle, Order, Shipment, DashboardStats, AppUser, Company, Task, OperationUpdate, Document } from '../types';
+import type { Customer, Driver, Vehicle, Order, Shipment, DashboardStats, AppUser, Company, Task, OperationUpdate, Document, CustomFieldDef } from '../types';
 
 const api = axios.create({ baseURL: '/api' });
 
@@ -119,6 +119,16 @@ export const fleet = {
   createVehicle: (data: Partial<Vehicle>) => api.post<Vehicle>('/fleet/vehicles', data).then(r => r.data),
   updateVehicle: (id: string, data: Partial<Vehicle>) => api.put<Vehicle>(`/fleet/vehicles/${id}`, data).then(r => r.data),
   deleteVehicle: (id: string) => api.delete(`/fleet/vehicles/${id}`),
+};
+
+export const customFields = {
+  list: (entityType?: string) =>
+    api.get<CustomFieldDef[]>('/custom-fields', { params: entityType ? { entityType } : undefined }).then(r => r.data),
+  create: (data: any) => api.post<CustomFieldDef>('/custom-fields', data).then(r => r.data),
+  update: (id: string, data: any) => api.put<CustomFieldDef>(`/custom-fields/${id}`, data).then(r => r.data),
+  delete: (id: string) => api.delete(`/custom-fields/${id}`),
+  saveValues: (entityType: string, entityId: string, values: Record<string, any>) =>
+    api.put(`/custom-fields/values/${entityType}/${entityId}`, values).then(r => r.data),
 };
 
 export const shipments = {

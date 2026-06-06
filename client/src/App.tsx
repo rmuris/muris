@@ -14,6 +14,7 @@ import Users from './pages/Users';
 import Tasks from './pages/Tasks';
 import Documents from './pages/Documents';
 import Updates from './pages/Updates';
+import CustomFieldsManager from './pages/CustomFieldsManager';
 
 export default function App() {
   return (
@@ -38,6 +39,9 @@ export default function App() {
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/updates" element={<Updates />} />
+          <Route path="/custom-fields" element={
+            <ProtectedRoute roles={['SUPER_ADMIN', 'ADMIN', 'MANAGER']}><CustomFieldsManager /></ProtectedRoute>
+          } />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

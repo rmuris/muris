@@ -8,14 +8,15 @@ datasource db {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  phone      String?
+  address    String?
+  customData String?  // JSON key-value store for custom fields
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  orders     Order[]
 }
 
 model Driver {
@@ -59,6 +60,7 @@ model Order {
   description  String?
   status       String     @default("PENDING") // PENDING | ASSIGNED | IN_TRANSIT | DELIVERED | CANCELLED
   totalCost    Float?
+  customData   String?    // JSON key-value store for custom fields
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   shipment     Shipment?
@@ -85,6 +87,7 @@ model Shipment {
   pickedUpAt     DateTime?
   deliveredAt    DateTime?
   notes          String?
+  customData     String?   // JSON key-value store for custom fields
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   events         ShipmentEvent[]
@@ -115,6 +118,7 @@ model Company {
   onboardingStatus String    @default("PENDING") // PENDING | IN_PROGRESS | APPROVED | REJECTED
   onboardingData   String?   // JSON blob
   notes            String?
+  customData       String?   // JSON key-value store for custom fields
   isActive         Boolean   @default(true)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -122,6 +126,21 @@ model Company {
   documents        Document[]
   updates          OperationUpdate[]
   tasks            Task[]    @relation("CompanyTasks")
+}
+
+model CustomFieldDef {
+  id           String   @id @default(cuid())
+  entityType   String   // ORDER | SHIPMENT | CUSTOMER | COMPANY
+  name         String
+  label        String
+  fieldType    String   // TEXT | NUMBER | DATE | SELECT | BOOLEAN
+  options      String?  // JSON array of strings for SELECT type
+  required     Boolean  @default(false)
+  position     Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@unique([entityType, name])
 }
 
 model User {

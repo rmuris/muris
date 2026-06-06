@@ -12,11 +12,12 @@ import companiesRouter from './routes/companies';
 import updatesRouter from './routes/updates';
 import tasksRouter from './routes/tasks';
 import documentsRouter from './routes/documents';
+import customFieldsRouter from './routes/customFields';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'] }));
 app.use(express.json());
 
 // Serve uploaded files
@@ -33,6 +34,7 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/shipments', shipmentsRouter);
 app.use('/api/fleet', fleetRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/custom-fields', customFieldsRouter);
 
 app.listen(PORT, () => {
   console.log(`TMS server running on http://localhost:${PORT}`);
