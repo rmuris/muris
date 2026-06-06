@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  orders    Order[]
+}
+
+model Driver {
+  id           String     @id @default(cuid())
+  name         String
+  email        String     @unique
+  phone        String?
+  licenseNo    String     @unique
+  status       String     @default("AVAILABLE") // AVAILABLE | ON_ROUTE | OFF_DUTY
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  vehicle      Vehicle?
+  shipments    Shipment[]
+}
+
+model Vehicle {
+  id           String     @id @default(cuid())
+  plate        String     @unique
+  make         String
+  model        String
+  year         Int
+  capacity     Float      // tons
+  status       String     @default("AVAILABLE") // AVAILABLE | IN_USE | MAINTENANCE
+  mileage      Int        @default(0)
+  lastService  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  driverId     String?    @unique
+  driver       Driver?    @relation(fields: [driverId], references: [id])
+  shipments    Shipment[]
+}
+
+model Order {
+  id           String     @id @default(cuid())
+  orderNo      String     @unique
+  customerId   String
+  customer     Customer   @relation(fields: [customerId], references: [id])
+  origin       String
+  destination  String
+  weight       Float      // tons
+  description  String?
+  status       String     @default("PENDING") // PENDING | ASSIGNED | IN_TRANSIT | DELIVERED | CANCELLED
+  totalCost    Float?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  shipment     Shipment?
+}
+
+model Shipment {
+  id             String    @id @default(cuid())
+  trackingNo     String    @unique
+  orderId        String    @unique
+  order          Order     @relation(fields: [orderId], references: [id])
+  driverId       String?
+  driver         Driver?   @relation(fields: [driverId], references: [id])
+  vehicleId      String?
+  vehicle        Vehicle?  @relation(fields: [vehicleId], references: [id])
+  status         String    @default("PENDING") // PENDING | PICKED_UP | IN_TRANSIT | OUT_FOR_DELIVERY | DELIVERED | FAILED
+  origin         String
+  destination    String
+  estimatedDist  Float?    // km
+  estimatedTime  Int?      // minutes
+  routeWaypoints String?   // JSON string of waypoints
+  pickedUpAt     DateTime?
+  deliveredAt    DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  events         ShipmentEvent[]
+}
+
+model ShipmentEvent {
+  id          String   @id @default(cuid())
+  shipmentId  String
+  shipment    Shipment @relation(fields: [shipmentId], references: [id])
+  status      String
+  note        String?
+  location    String?
+  createdAt   DateTime @default(now())
+}
