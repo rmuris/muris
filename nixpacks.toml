@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm install --prefix server && npm install --prefix client"]
+
+[phases.build]
+cmds = ["npm run build --prefix client && npm run build --prefix server"]
+
+[start]
+cmd = "NODE_ENV=production npm start"

@@ -16,8 +16,13 @@ import customFieldsRouter from './routes/customFields';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const isProd = process.env.NODE_ENV === 'production';
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174'] }));
+app.use(cors({
+  origin: isProd
+    ? process.env.FRONTEND_URL || true   // allow same-origin in prod
+    : ['http://localhost:5173', 'http://localhost:5174'],
+}));
 app.use(express.json());
 
 // Serve uploaded files
@@ -35,6 +40,15 @@ app.use('/api/shipments', shipmentsRouter);
 app.use('/api/fleet', fleetRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/custom-fields', customFieldsRouter);
+
+// Serve React frontend in production
+if (isProd) {
+  const clientDist = path.join(__dirname, '../../client/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`TMS server running on http://localhost:${PORT}`);

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../db';
+import prisma from '../db';
 import { authenticate, requireRole } from '../middleware/auth';
 
 const router = Router();
