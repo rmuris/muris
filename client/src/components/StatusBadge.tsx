@@ -1,22 +1,26 @@
 const colors: Record<string, string> = {
-  PENDING:           'bg-yellow-100 text-yellow-800',
-  ASSIGNED:          'bg-blue-100 text-blue-800',
-  IN_TRANSIT:        'bg-indigo-100 text-indigo-800',
-  OUT_FOR_DELIVERY:  'bg-purple-100 text-purple-800',
-  DELIVERED:         'bg-green-100 text-green-800',
-  CANCELLED:         'bg-red-100 text-red-800',
-  FAILED:            'bg-red-100 text-red-800',
-  PICKED_UP:         'bg-cyan-100 text-cyan-800',
-  AVAILABLE:         'bg-green-100 text-green-800',
-  ON_ROUTE:          'bg-blue-100 text-blue-800',
-  OFF_DUTY:          'bg-gray-100 text-gray-600',
-  IN_USE:            'bg-blue-100 text-blue-800',
-  MAINTENANCE:       'bg-orange-100 text-orange-800',
+  PENDING:           'bg-amber-500/15 text-amber-300 border-amber-500/20',
+  ASSIGNED:          'bg-accent/15 text-blue-300 border-accent/20',
+  IN_TRANSIT:        'bg-indigo-500/15 text-indigo-300 border-indigo-500/20',
+  OUT_FOR_DELIVERY:  'bg-brand-500/20 text-brand-300 border-brand-500/30',
+  DELIVERED:         'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+  CANCELLED:         'bg-red-500/15 text-red-400 border-red-500/20',
+  FAILED:            'bg-red-500/15 text-red-400 border-red-500/20',
+  PICKED_UP:         'bg-cyan-500/15 text-cyan-300 border-cyan-500/20',
+  AVAILABLE:         'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+  ON_ROUTE:          'bg-accent/15 text-blue-300 border-accent/20',
+  OFF_DUTY:          'bg-white/5 text-brand-400 border-white/10',
+  IN_USE:            'bg-accent/15 text-blue-300 border-accent/20',
+  MAINTENANCE:       'bg-orange-500/15 text-orange-300 border-orange-500/20',
+  APPROVED:          'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
+  REJECTED:          'bg-red-500/15 text-red-400 border-red-500/20',
+  IN_PROGRESS:       'bg-accent/15 text-blue-300 border-accent/20',
+  COMPLETED:         'bg-emerald-500/15 text-emerald-300 border-emerald-500/20',
 };
 
 export default function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[status] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span className={`badge border ${colors[status] ?? 'bg-white/5 text-brand-400 border-white/10'}`}>
       {status.replace(/_/g, ' ')}
     </span>
   );

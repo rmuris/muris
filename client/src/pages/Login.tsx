@@ -27,53 +27,116 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Muris TMS</h1>
-          <p className="text-gray-400 mt-1">Logistics Management Platform</p>
+    <div className="min-h-screen bg-gradient-dark flex">
+      {/* Left branding panel */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-accent/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="flex items-center gap-3 relative z-10">
+          <div className="w-10 h-10 rounded-xl bg-gradient-brand flex items-center justify-center shadow-brand">
+            <span className="font-heading font-bold text-white text-lg">M</span>
+          </div>
+          <div>
+            <div className="font-heading font-bold text-white text-lg">Muris TMS</div>
+            <div className="text-brand-300 text-xs">Transportation Management</div>
+          </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Sign in to your account</h2>
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="you@company.com"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </button>
-          </form>
-          <p className="mt-4 text-xs text-gray-400 text-center">
-            Contact your administrator to get access.
+
+        <div className="relative z-10">
+          <h1 className="font-heading font-bold text-4xl text-white leading-tight mb-4">
+            Logistics<br />
+            <span className="text-transparent bg-clip-text bg-gradient-brand">Intelligence</span><br />
+            Redefined.
+          </h1>
+          <p className="text-brand-300 text-base leading-relaxed max-w-sm">
+            Track every shipment, coordinate carriers and customs brokers, and manage your entire operation from one platform.
           </p>
+        </div>
+
+        <div className="flex gap-8 relative z-10">
+          {[
+            { value: '6+', label: 'Portal Types' },
+            { value: '100%', label: 'Traceable' },
+            { value: '24/7', label: 'Operations' },
+          ].map(({ value, label }) => (
+            <div key={label}>
+              <div className="font-heading font-bold text-2xl text-white">{value}</div>
+              <div className="text-brand-300 text-xs mt-0.5">{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right login panel */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          <div className="flex lg:hidden items-center gap-3 mb-8 justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-brand flex items-center justify-center shadow-brand">
+              <span className="font-heading font-bold text-white text-lg">M</span>
+            </div>
+            <span className="font-heading font-bold text-white text-lg">Muris TMS</span>
+          </div>
+
+          <div className="card border border-white/10">
+            <div className="mb-8">
+              <h2 className="font-heading font-bold text-2xl text-white mb-1.5">Welcome back</h2>
+              <p className="text-brand-300 text-sm">Sign in to access your portal</p>
+            </div>
+
+            {error && (
+              <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-medium text-brand-200 mb-1.5">Email address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="admin@muris.com"
+                  required
+                  className="input-dark w-full"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-brand-200 mb-1.5">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className="input-dark w-full"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full text-center disabled:opacity-50"
+              >
+                {loading ? 'Signing in…' : 'Sign In'}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-xs text-brand-400">
+              Don't have access? Contact your administrator.
+            </p>
+
+            <div className="mt-6 pt-6 border-t border-white/5">
+              <p className="text-xs text-brand-400 mb-2.5">Available portals</p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Staff', 'Customer', 'Supplier', 'US Carrier', 'MX Carrier', 'Customs'].map(p => (
+                  <span key={p} className="text-[10px] px-2.5 py-0.5 rounded-full bg-brand-800/60 text-brand-300 border border-white/5">
+                    {p}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
