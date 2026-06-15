@@ -8,59 +8,157 @@ datasource db {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  address   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  phone        String?
+  address      String?
+  rfc          String?
+  ein          String?
+  type         String    @default("SHIPPER")
+  status       String    @default("ACTIVE")
+  country      String    @default("MX")
+  city         String?
+  state        String?
+  zipCode      String?
+  website      String?
+  industry     String?
+  creditLimit  Float     @default(0)
+  paymentTerms Int       @default(30)
+  riskScore    Float     @default(50)
+  trustScore   Float     @default(50)
+  taxStatus    String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  orders       Order[]
+  quotes       Quote[]
+  documents    Document[]
+  invoices     Invoice[]
+  contacts     Contact[]
+  riskEvents   RiskEvent[]
+}
+
+model Contact {
+  id           String    @id @default(cuid())
+  customerId   String
+  customer     Customer  @relation(fields: [customerId], references: [id])
+  name         String
+  email        String?
+  phone        String?
+  role         String?
+  isPrimary    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+}
+
+model Carrier {
+  id              String    @id @default(cuid())
+  name            String
+  mc              String?   @unique
+  dot             String?   @unique
+  ein             String?
+  rfc             String?
+  email           String?
+  phone           String?
+  address         String?
+  country         String    @default("MX")
+  type            String    @default("ASSET")
+  status          String    @default("ACTIVE")
+  safetyScore     Float?
+  insuranceExpiry DateTime?
+  insuranceAmount Float?
+  riskScore       Float     @default(50)
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  shipments       Shipment[]
+  documents       Document[]
+  drivers         Driver[]
+  vehicles        Vehicle[]
 }
 
 model Driver {
-  id           String     @id @default(cuid())
-  name         String
-  email        String     @unique
-  phone        String?
-  licenseNo    String     @unique
-  status       String     @default("AVAILABLE") // AVAILABLE | ON_ROUTE | OFF_DUTY
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  vehicle      Vehicle?
-  shipments    Shipment[]
+  id                 String    @id @default(cuid())
+  carrierId          String?
+  carrier            Carrier?  @relation(fields: [carrierId], references: [id])
+  name               String
+  email              String    @unique
+  phone              String?
+  licenseNo          String    @unique
+  licenseExpiry      DateTime?
+  medicalCardExpiry  DateTime?
+  fastCardNo         String?
+  fastCardExpiry     DateTime?
+  passportNo         String?
+  passportExpiry     DateTime?
+  hazmatCert         Boolean   @default(false)
+  hazmatExpiry       DateTime?
+  status             String    @default("AVAILABLE")
+  complianceScore    Float     @default(100)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  vehicle            Vehicle?
+  shipments          Shipment[]
+  documents          Document[]
 }
 
 model Vehicle {
-  id           String     @id @default(cuid())
-  plate        String     @unique
-  make         String
-  model        String
-  year         Int
-  capacity     Float      // tons
-  status       String     @default("AVAILABLE") // AVAILABLE | IN_USE | MAINTENANCE
-  mileage      Int        @default(0)
-  lastService  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  driverId     String?    @unique
-  driver       Driver?    @relation(fields: [driverId], references: [id])
-  shipments    Shipment[]
+  id                 String    @id @default(cuid())
+  carrierId          String?
+  carrier            Carrier?  @relation(fields: [carrierId], references: [id])
+  driverId           String?   @unique
+  driver             Driver?   @relation(fields: [driverId], references: [id])
+  plate              String    @unique
+  vin                String?
+  make               String
+  model              String
+  year               Int
+  type               String    @default("TRUCK")
+  capacity           Float
+  status             String    @default("AVAILABLE")
+  mileage            Float     @default(0)
+  lastService        DateTime?
+  nextServiceMileage Float?
+  fuelType           String    @default("DIESEL")
+  gpsDeviceId        String?
+  eldDeviceId        String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  shipments          Shipment[]
+  maintenanceRecords MaintenanceRecord[]
+  documents          Document[]
+}
+
+model MaintenanceRecord {
+  id                 String    @id @default(cuid())
+  vehicleId          String
+  vehicle            Vehicle   @relation(fields: [vehicleId], references: [id])
+  type               String
+  description        String
+  cost               Float     @default(0)
+  mileageAtService   Float?
+  performedAt        DateTime
+  nextServiceDate    DateTime?
+  nextServiceMileage Float?
+  vendor             String?
+  notes              String?
+  status             String    @default("COMPLETED")
+  createdAt          DateTime  @default(now())
 }
 
 model Order {
-  id           String     @id @default(cuid())
-  orderNo      String     @unique
+  id           String    @id @default(cuid())
+  orderNo      String    @unique
   customerId   String
-  customer     Customer   @relation(fields: [customerId], references: [id])
+  customer     Customer  @relation(fields: [customerId], references: [id])
   origin       String
   destination  String
-  weight       Float      // tons
+  weight       Float
   description  String?
-  status       String     @default("PENDING") // PENDING | ASSIGNED | IN_TRANSIT | DELIVERED | CANCELLED
+  status       String    @default("PENDING")
   totalCost    Float?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   shipment     Shipment?
 }
 
@@ -69,22 +167,28 @@ model Shipment {
   trackingNo     String    @unique
   orderId        String    @unique
   order          Order     @relation(fields: [orderId], references: [id])
+  carrierId      String?
+  carrier        Carrier?  @relation(fields: [carrierId], references: [id])
   driverId       String?
   driver         Driver?   @relation(fields: [driverId], references: [id])
   vehicleId      String?
   vehicle        Vehicle?  @relation(fields: [vehicleId], references: [id])
-  status         String    @default("PENDING") // PENDING | PICKED_UP | IN_TRANSIT | OUT_FOR_DELIVERY | DELIVERED | FAILED
+  status         String    @default("PENDING")
   origin         String
   destination    String
-  estimatedDist  Float?    // km
-  estimatedTime  Int?      // minutes
-  routeWaypoints String?   // JSON string of waypoints
+  estimatedDist  Float?
+  estimatedTime  Int?
+  routeWaypoints String?
   pickedUpAt     DateTime?
   deliveredAt    DateTime?
   notes          String?
+  riskScore      Float     @default(0)
+  etaConfidence  Float     @default(100)
+  profitability  Float?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   events         ShipmentEvent[]
+  customsEntries CustomsEntry[]
 }
 
 model ShipmentEvent {
@@ -95,4 +199,321 @@ model ShipmentEvent {
   note        String?
   location    String?
   createdAt   DateTime @default(now())
+}
+
+model Warehouse {
+  id        String    @id @default(cuid())
+  name      String
+  code      String    @unique
+  address   String
+  city      String
+  state     String
+  country   String    @default("MX")
+  zipCode   String?
+  type      String    @default("GENERAL")
+  sqft      Float?
+  capacity  Float?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  locations WarehouseLocation[]
+  inventory InventoryItem[]
+  receipts  WarehouseReceipt[]
+}
+
+model WarehouseLocation {
+  id          String     @id @default(cuid())
+  warehouseId String
+  warehouse   Warehouse  @relation(fields: [warehouseId], references: [id])
+  code        String
+  zone        String?
+  aisle       String?
+  rack        String?
+  level       String?
+  bin         String?
+  isOccupied  Boolean    @default(false)
+  inventory   InventoryItem[]
+}
+
+model InventoryItem {
+  id              String             @id @default(cuid())
+  warehouseId     String
+  warehouse       Warehouse          @relation(fields: [warehouseId], references: [id])
+  locationId      String?
+  location        WarehouseLocation? @relation(fields: [locationId], references: [id])
+  sku             String
+  description     String
+  quantity        Float
+  unitOfMeasure   String             @default("UNIT")
+  weight          Float?
+  lotNumber       String?
+  serialNumber    String?
+  expirationDate  DateTime?
+  customerId      String?
+  hsCode          String?
+  countryOfOrigin String?
+  unitValue       Float?
+  totalValue      Float?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model WarehouseReceipt {
+  id          String    @id @default(cuid())
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  receiptNo   String    @unique
+  customerId  String?
+  type        String    @default("INBOUND")
+  status      String    @default("PENDING")
+  items       String    @default("[]")
+  totalWeight Float?
+  notes       String?
+  receivedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model CustomsEntry {
+  id            String    @id @default(cuid())
+  shipmentId    String?
+  shipment      Shipment? @relation(fields: [shipmentId], references: [id])
+  orderId       String?
+  type          String
+  direction     String
+  status        String    @default("DRAFT")
+  pedimentoNo   String?
+  entryNo       String?
+  dodaNo        String?
+  portOfEntry   String?
+  brokerName    String?
+  brokerRfc     String?
+  importerId    String?
+  exporterId    String?
+  hsCode        String?
+  commodityDesc String?
+  totalValue    Float?
+  duties        Float?
+  taxes         Float?
+  entryDate     DateTime?
+  releaseDate   DateTime?
+  examType      String?
+  notes         String?
+  complianceScore Float?
+  riskScore       Float?
+  aiAnalysis    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  documents     Document[]
+  cartaPorte    CartaPorte?
+}
+
+model CartaPorte {
+  id               String        @id @default(cuid())
+  customsEntryId   String?       @unique
+  customsEntry     CustomsEntry? @relation(fields: [customsEntryId], references: [id])
+  version          String        @default("3.0")
+  folio            String?
+  rfcEmisor        String?
+  rfcReceptor      String?
+  rfcTransportista String?
+  origenRFC        String?
+  destinoRFC       String?
+  totalDistance    Float?
+  unitCode         String?
+  commodityCode    String?
+  description      String?
+  weight           Float?
+  vehiclePlate     String?
+  trailerPlate     String?
+  driverRFC        String?
+  driverLicense    String?
+  insurancePolicy  String?
+  insuranceCompany String?
+  validationErrors String?
+  complianceScore  Float?
+  status           String        @default("DRAFT")
+  xml              String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Quote {
+  id            String    @id @default(cuid())
+  quoteNo       String    @unique
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  origin        String
+  destination   String
+  weight        Float?
+  commodity     String?
+  equipmentType String?
+  pickupDate    DateTime?
+  deliveryDate  DateTime?
+  rate          Float?
+  fuelSurcharge Float?
+  accessorials  Float?
+  totalRate     Float?
+  costBasis     Float?
+  margin        Float?
+  marginPct     Float?
+  status        String    @default("DRAFT")
+  validUntil    DateTime?
+  notes         String?
+  aiGenerated   Boolean   @default(false)
+  orderId       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Invoice {
+  id           String    @id @default(cuid())
+  invoiceNo    String    @unique
+  customerId   String?
+  customer     Customer? @relation(fields: [customerId], references: [id])
+  orderId      String?
+  type         String    @default("RECEIVABLE")
+  status       String    @default("DRAFT")
+  issueDate    DateTime  @default(now())
+  dueDate      DateTime?
+  subtotal     Float     @default(0)
+  tax          Float     @default(0)
+  total        Float     @default(0)
+  paidAmount   Float     @default(0)
+  balance      Float     @default(0)
+  currency     String    @default("USD")
+  exchangeRate Float?
+  notes        String?
+  items        String    @default("[]")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  payments     Payment[]
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  amount    Float
+  method    String
+  reference String?
+  paidAt    DateTime @default(now())
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model Document {
+  id             String        @id @default(cuid())
+  name           String
+  type           String
+  fileUrl        String?
+  fileSize       Int?
+  mimeType       String?
+  customerId     String?
+  customer       Customer?     @relation(fields: [customerId], references: [id])
+  carrierId      String?
+  carrier        Carrier?      @relation(fields: [carrierId], references: [id])
+  driverId       String?
+  driver         Driver?       @relation(fields: [driverId], references: [id])
+  vehicleId      String?
+  vehicle        Vehicle?      @relation(fields: [vehicleId], references: [id])
+  customsEntryId String?
+  customsEntry   CustomsEntry? @relation(fields: [customsEntryId], references: [id])
+  extractedData  String?
+  aiAnalysis     String?
+  version        Int           @default(1)
+  status         String        @default("ACTIVE")
+  expiresAt      DateTime?
+  uploadedAt     DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+}
+
+model RiskEvent {
+  id          String    @id @default(cuid())
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  entityType  String?
+  entityId    String?
+  type        String
+  severity    String
+  title       String
+  description String?
+  status      String    @default("OPEN")
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Notification {
+  id             String    @id @default(cuid())
+  title          String
+  message        String
+  type           String    @default("INFO")
+  channel        String    @default("IN_APP")
+  recipientId    String?
+  recipientEmail String?
+  recipientPhone String?
+  status         String    @default("PENDING")
+  sentAt         DateTime?
+  readAt         DateTime?
+  entityType     String?
+  entityId       String?
+  metadata       String?
+  createdAt      DateTime  @default(now())
+}
+
+model AIAgentLog {
+  id         String   @id @default(cuid())
+  agentType  String
+  action     String
+  input      String?
+  output     String?
+  status     String   @default("COMPLETED")
+  duration   Int?
+  entityType String?
+  entityId   String?
+  createdAt  DateTime @default(now())
+}
+
+model Automation {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  trigger     String
+  condition   String?
+  action      String
+  isActive    Boolean   @default(true)
+  lastRunAt   DateTime?
+  runCount    Int       @default(0)
+  createdAt   DateTime  @default(now())
+}
+
+model BorderCrossing {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  city        String
+  country     String
+  portType    String    @default("land")
+  waitTimeNB  Int?
+  waitTimeSB  Int?
+  lastUpdated DateTime?
+  isOpen      Boolean   @default(true)
+  alerts      String?
+  createdAt   DateTime  @default(now())
+}
+
+model ComplianceRecord {
+  id              String    @id @default(cuid())
+  type            String
+  entityType      String
+  entityId        String
+  status          String    @default("ACTIVE")
+  score           Float     @default(0)
+  lastAuditDate   DateTime?
+  nextAuditDate   DateTime?
+  certificationNo String?
+  expiresAt       DateTime?
+  findings        String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
