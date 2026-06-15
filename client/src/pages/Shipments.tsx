@@ -17,8 +17,8 @@ export default function Shipments() {
   useEffect(() => { load(); }, [filterStatus]);
   useEffect(() => {
     ordersApi.list({ status: 'PENDING' }).then(setPendingOrders);
-    fleet.drivers().then(d => setDrivers(d.filter(x => x.status === 'AVAILABLE')));
-    fleet.vehicles().then(v => setVehicles(v.filter(x => x.status === 'AVAILABLE')));
+    fleet.drivers().then((d: Driver[]) => setDrivers(d.filter((x: Driver) => x.status === 'AVAILABLE')));
+    fleet.vehicles().then((v: Vehicle[]) => setVehicles(v.filter((x: Vehicle) => x.status === 'AVAILABLE')));
   }, []);
 
   const assign = async () => {
