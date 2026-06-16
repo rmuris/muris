@@ -10,9 +10,12 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@playwright/test": "^1.61.0",
     "@prisma/client": "^5.14.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "playwright": "^1.61.0",
+    "puppeteer": "^25.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
