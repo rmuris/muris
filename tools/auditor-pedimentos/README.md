@@ -66,6 +66,13 @@ pasos y se imprime al final, además de quedar al pie del reporte. Sonnet 5
 cotiza a precio promocional hasta el 31/08/2026; la tabla lo aplica sola
 mientras esté vigente y vuelve al de lista después.
 
+**Medido:** un expediente de 3 documentos (pedimento, factura, packing list)
+de una página cada uno costó **$0.16 USD** — unos 7,100 tokens de entrada en
+extracción y ~9,000 de salida en el cruce, que corre con esfuerzo `high` y
+razonamiento adaptativo. El grueso del costo es el paso de análisis, y crece
+con el número de partidas, no con el número de documentos. Bajar `effort` a
+`medium` es la palanca si el volumen lo justifica.
+
 ## Límites conocidos
 
 - Un archivo no puede pasar de ~24 MB (la petición a la API tope en 32 MB y el
