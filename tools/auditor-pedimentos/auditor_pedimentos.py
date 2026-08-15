@@ -44,9 +44,11 @@ import argparse
 import base64
 import json
 import os
+import re
 import sys
+import unicodedata
 from dataclasses import dataclass, field, asdict
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -75,7 +77,8 @@ SEVERIDADES = {
     "BAJO":    "Observación de forma. Sin impacto fiscal inmediato.",
 }
 
-# Documentos que el motor sabe leer. La clave es el prefijo del nombre de archivo.
+# Documentos que el motor sabe leer. La clave se reconoce en el nombre del
+# archivo a través de ALIAS_DOCUMENTO, más abajo.
 TIPOS_DOCUMENTO = {
     "pedimento":            "Pedimento de importación/exportación",
     "factura":              "Factura comercial",
@@ -109,6 +112,7 @@ class ResultadoAuditoria:
     cliente: str
     fecha_revision: str
     documentos_analizados: list = field(default_factory=list)
+    documentos_con_error: list = field(default_factory=list)
     documentos_faltantes: list = field(default_factory=list)
     datos_extraidos: dict = field(default_factory=dict)
     hallazgos: list = field(default_factory=list)
@@ -122,11 +126,36 @@ class ResultadoAuditoria:
 # Utilidades de archivo
 # ---------------------------------------------------------------------------
 
+def normalizar(texto: str) -> str:
+    """Minúsculas sin acentos ni separadores: 'Carta 3.1.8' -> 'carta318'."""
+    sin_acentos = "".join(
+        c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)
+    )
+    return re.sub(r"[^a-z0-9]", "", sin_acentos.lower())
+
+
+# Los expedientes llegan con nombres de archivo muy variados. Se evalúan en
+# este orden: el primer tipo cuyo alias aparezca en el nombre gana, así que
+# los más específicos van antes que los genéricos.
+ALIAS_DOCUMENTO = {
+    "pedimento":          ("pedimento",),
+    "cfdi":               ("cfdi",),
+    "certificado_origen": ("certificadodeorigen", "certificadoorigen", "certorigen",
+                           "eur1", "tmec"),
+    "carta_318":          ("carta318", "declaracionbajoprotesta"),
+    "manifestacion":      ("manifestaciondevalor", "manifestacion"),
+    "packing":            ("packinglist", "packing", "listadeempaque", "listaempaque"),
+    "conocimiento":       ("conocimientodeembarque", "conocimiento", "billoflading",
+                           "airwaybill", "guiaaerea", "guia"),
+    "factura":            ("facturacomercial", "factura", "invoice"),
+}
+
+
 def clasificar_archivo(ruta: Path) -> str | None:
     """Identifica el tipo de documento por el nombre del archivo."""
-    nombre = ruta.stem.lower()
-    for clave in TIPOS_DOCUMENTO:
-        if nombre.startswith(clave) or clave in nombre:
+    nombre = normalizar(ruta.stem)
+    for clave, alias in ALIAS_DOCUMENTO.items():
+        if any(a in nombre for a in alias):
             return clave
     return None
 
@@ -170,10 +199,15 @@ def texto_de(respuesta) -> str:
 def limpiar_json(texto: str) -> str:
     """Quita el cercado markdown que a veces envuelve la respuesta."""
     texto = texto.strip()
-    if texto.startswith("```"):
-        texto = texto.split("\n", 1)[-1] if "\n" in texto else texto
-        texto = texto.removeprefix("json").lstrip()
-    return texto.removesuffix("```").strip()
+    if not texto.startswith("```"):
+        return texto
+    texto = texto[3:]
+    for etiqueta in ("json", "JSON"):
+        texto = texto.removeprefix(etiqueta)
+    texto = texto.lstrip()
+    if texto.endswith("```"):
+        texto = texto[:-3]
+    return texto.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -462,6 +496,12 @@ def generar_reporte(res: ResultadoAuditoria, resumen: str, nivel: str) -> str:
     lineas += ["", "---", "", "## Documentos analizados", ""]
     for d in res.documentos_analizados:
         lineas.append(f"- ✅ {d}")
+    if not res.documentos_analizados:
+        lineas.append("_Ninguno pudo leerse._")
+    if res.documentos_con_error:
+        lineas += ["", "**No pudieron leerse — revisar a mano:**", ""]
+        for d in res.documentos_con_error:
+            lineas.append(f"- ⚠️ {d}")
     if res.documentos_faltantes:
         lineas += ["", "**No proporcionados:**", ""]
         for d in res.documentos_faltantes:
@@ -528,19 +568,31 @@ def generar_reporte(res: ResultadoAuditoria, resumen: str, nivel: str) -> str:
 # Costos
 # ---------------------------------------------------------------------------
 
-# USD por millón de tokens, a precio de lista. Sonnet 5 tiene precio
-# promocional más bajo hasta el 31/08/2026; usamos el de lista para no
-# subestimar el costo.
+# USD por millón de tokens, a precio de lista.
 PRECIOS = {
     MODELO_EXTRACCION: {"entrada": 1.00, "salida": 5.00},
     MODELO_ANALISIS:   {"entrada": 3.00, "salida": 15.00},
 }
 
+# Sonnet 5 cotiza más barato hasta esta fecha; después vuelve al de lista
+# y este bloque deja de aplicar solo.
+PROMOCION = {MODELO_ANALISIS: ({"entrada": 2.00, "salida": 10.00}, date(2026, 8, 31))}
 
-def calcular_costo(uso: list[tuple[str, int, int]]) -> float:
+
+def precios_vigentes(hoy: date | None = None) -> dict[str, dict[str, float]]:
+    hoy = hoy or date.today()
+    precios = {m: dict(p) for m, p in PRECIOS.items()}
+    for modelo, (tarifa, vence) in PROMOCION.items():
+        if hoy <= vence:
+            precios[modelo] = dict(tarifa)
+    return precios
+
+
+def calcular_costo(uso: list[tuple[str, int, int]], precios: dict | None = None) -> float:
+    precios = precios or precios_vigentes()
     total = 0.0
     for modelo, entrada, salida in uso:
-        p = PRECIOS.get(modelo, {"entrada": 3.0, "salida": 15.0})
+        p = precios.get(modelo, {"entrada": 3.0, "salida": 15.0})
         total += (entrada / 1_000_000) * p["entrada"]
         total += (salida / 1_000_000) * p["salida"]
     return total
@@ -572,7 +624,8 @@ def auditar(carpeta: Path, nombre_cliente: str) -> ResultadoAuditoria:
     print(f"Archivos: {len(archivos)}\n")
 
     uso_tokens = []
-    encontrados = set()
+    presentes = set()    # el archivo venía en el expediente
+    encontrados = set()  # además se pudo extraer
 
     # Paso 1 — extracción
     for ruta in archivos:
@@ -580,6 +633,7 @@ def auditar(carpeta: Path, nombre_cliente: str) -> ResultadoAuditoria:
         if tipo is None:
             print(f"  [omitido] {ruta.name} (tipo no reconocido)")
             continue
+        presentes.add(tipo)
         datos = extraer_documento(cliente, ruta, tipo)
 
         # Un expediente puede traer varias facturas o packing lists; no se
@@ -591,18 +645,26 @@ def auditar(carpeta: Path, nombre_cliente: str) -> ResultadoAuditoria:
             n += 1
 
         res.datos_extraidos[clave] = datos
-        res.documentos_analizados.append(f"{TIPOS_DOCUMENTO[tipo]} — {ruta.name}")
-        encontrados.add(tipo)
+        if datos.get("_error"):
+            # No se leyó: no puede contarse como analizado o el reporte
+            # afirmaría una cobertura que no existe.
+            res.documentos_con_error.append(
+                f"{TIPOS_DOCUMENTO[tipo]} — {ruta.name} ({datos['_error']})"
+            )
+        else:
+            res.documentos_analizados.append(f"{TIPOS_DOCUMENTO[tipo]} — {ruta.name}")
+            encontrados.add(tipo)
         if "_uso" in datos:
             uso_tokens.append((MODELO_EXTRACCION, datos["_uso"]["entrada"], datos["_uso"]["salida"]))
 
-    # Documentos esperados que no llegaron
+    # Documentos esperados que no llegaron. Un archivo que sí vino pero no se
+    # pudo leer no es "faltante": ya aparece en documentos_con_error.
     esperados = ["pedimento", "factura", "packing"]
     for e in esperados:
-        if e not in encontrados and not (e == "factura" and "cfdi" in encontrados):
+        if e not in presentes and not (e == "factura" and "cfdi" in presentes):
             res.documentos_faltantes.append(TIPOS_DOCUMENTO[e])
 
-    if "pedimento" not in encontrados:
+    if "pedimento" not in presentes:
         print("\n  ! ADVERTENCIA: no se identificó un pedimento en el expediente.")
 
     # Paso 2 — análisis

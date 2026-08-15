@@ -22,8 +22,9 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 python auditor_pedimentos.py ./expedientes/PED-3001234 --cliente "ACME SA de CV"
 ```
 
-La carpeta del expediente se arma por nombre de archivo — el prefijo determina
-cómo se clasifica cada documento:
+La carpeta del expediente se arma por nombre de archivo. El nombre se normaliza
+(sin acentos, sin guiones ni espacios) antes de clasificar, así que
+`carta 3.1.8.pdf`, `Carta-3.1.8.pdf` y `carta_318.pdf` se reconocen igual:
 
 ```
 PED-3001234/
@@ -47,7 +48,8 @@ Ambas se escriben dentro de la carpeta del expediente:
 
 - `REPORTE_<expediente>_<AAAAMMDD>.md` — el borrador para revisión, con la
   tabla de severidades, los hallazgos detallados y la lista de verificación
-  que firma quien revisa.
+  que firma quien revisa. Los documentos que no se pudieron leer se listan
+  aparte, con ⚠️: no cuentan como analizados, porque el cruce no los vio.
 - `datos_<expediente>.json` — los datos crudos extraídos de cada documento y
   los hallazgos, para trazabilidad.
 
@@ -60,8 +62,9 @@ Ambas se escriben dentro de la carpeta del expediente:
 | 3. Reporte | Python | Arma el Markdown. Sin IA. |
 
 El costo de la corrida se calcula a partir del consumo real de tokens de ambos
-pasos y se imprime al final, además de quedar al pie del reporte. Se usa el
-precio de lista de cada modelo, así que es una cota superior.
+pasos y se imprime al final, además de quedar al pie del reporte. Sonnet 5
+cotiza a precio promocional hasta el 31/08/2026; la tabla lo aplica sola
+mientras esté vigente y vuelve al de lista después.
 
 ## Límites conocidos
 
