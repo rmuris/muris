@@ -4,3 +4,6 @@ dist/
 *.db-journal
 .env
 server/prisma/migrations/
+__pycache__/
+*.pyc
+.venv/
