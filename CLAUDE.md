@@ -9,17 +9,24 @@ Muris TMS — a Transportation Management System for a logistics company. TypeSc
 ## Commands
 
 ```bash
-# Install dependencies (run once)
-npm install && npm run install:all
+# First run: installs deps, creates server/.env, syncs the DB, seeds it
+npm install && npm run setup
 
 # Run both servers (frontend on :5173, backend on :3001)
 npm run dev
 
 # Database
-npm run db:migrate   # run Prisma migrations
+npm run db:push      # sync schema.prisma -> SQLite (no migration history)
+npm run db:migrate   # create a named migration instead
 npm run db:seed      # seed sample customers, drivers, vehicles, orders
 npm run db:studio    # open Prisma Studio GUI
 ```
+
+`server/.env` is gitignored, so a fresh clone has no `DATABASE_URL` and every
+Prisma command fails with P1012 until `npm run setup` creates it from
+`server/.env.example`. `migrations/` is gitignored too, which is why `db:push`
+is the default — plain `prisma migrate dev` would block on an interactive
+prompt for a migration name.
 
 Run only the backend: `cd server && npm run dev`
 Run only the frontend: `cd client && npm run dev`

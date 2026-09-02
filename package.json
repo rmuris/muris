@@ -2,8 +2,10 @@
   "name": "muris-tms",
   "private": true,
   "scripts": {
+    "setup": "npm run install:all && node scripts/setup.mjs && npm run db:push && npm run db:seed",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
     "install:all": "npm install --prefix server && npm install --prefix client",
+    "db:push": "npm run db:push --prefix server",
     "db:migrate": "npm run db:migrate --prefix server",
     "db:seed": "npm run db:seed --prefix server",
     "db:studio": "npm run db:studio --prefix server"
