@@ -16,7 +16,23 @@ function matches(input: string, ...terms: string[]) {
 }
 
 export async function offlineReply(input: string): Promise<string> {
-  if (matches(input, 'status', 'dashboard', 'overview', 'resumen', 'estado', 'how are we', 'situation')) {
+  // Order matters: an agent question mentioning "orders" must not fall into the
+  // orders branch, and an availability question must not fall through entirely.
+  if (matches(input, 'agent', 'agente')) {
+    const agents = await prisma.agent.findMany({ orderBy: { createdAt: 'desc' } });
+    const roster = agents.length
+      ? 'On the roster:\n' + agents.map(a => `${a.name} · ${a.role} · ${a.status}`).join('\n')
+      : 'No agents on the roster yet.';
+    return `${roster}\n\nForging new agents needs the full assistant.${OFFLINE_NOTE}`;
+  }
+
+  if (
+    matches(
+      input,
+      'status', 'dashboard', 'overview', 'operation', 'picture', 'situation', 'summary',
+      'how are we', 'resumen', 'estado', 'operacion', 'operación', 'panorama',
+    )
+  ) {
     const [orders, pending, active, drivers, vehicles] = await Promise.all([
       prisma.order.count(),
       prisma.order.count({ where: { status: 'PENDING' } }),
@@ -46,22 +62,6 @@ export async function offlineReply(input: string): Promise<string> {
     );
   }
 
-  if (matches(input, 'driver', 'conductor', 'chofer', 'operador')) {
-    const drivers = await prisma.driver.findMany({ orderBy: { name: 'asc' }, take: 10 });
-    if (!drivers.length) return `No drivers on the roster.${OFFLINE_NOTE}`;
-    return 'Drivers:\n' + drivers.map(d => `${d.name} · ${d.status}`).join('\n') + OFFLINE_NOTE;
-  }
-
-  if (matches(input, 'vehicle', 'truck', 'fleet', 'camion', 'camión', 'flota', 'unidad')) {
-    const vehicles = await prisma.vehicle.findMany({ orderBy: { plate: 'asc' }, take: 10 });
-    if (!vehicles.length) return `No vehicles on the fleet.${OFFLINE_NOTE}`;
-    return (
-      'Fleet:\n' +
-      vehicles.map(v => `${v.plate} · ${v.make} ${v.model} · ${v.capacity}t · ${v.status}`).join('\n') +
-      OFFLINE_NOTE
-    );
-  }
-
   if (matches(input, 'order', 'pedido', 'orden')) {
     const orders = await prisma.order.findMany({
       take: 5,
@@ -76,12 +76,22 @@ export async function offlineReply(input: string): Promise<string> {
     );
   }
 
-  if (matches(input, 'agent', 'agente')) {
-    const agents = await prisma.agent.findMany({ orderBy: { createdAt: 'desc' } });
-    const roster = agents.length
-      ? 'On the roster:\n' + agents.map(a => `${a.name} · ${a.role} · ${a.status}`).join('\n')
-      : 'No agents on the roster yet.';
-    return `${roster}\n\nForging new agents needs the full assistant.${OFFLINE_NOTE}`;
+  if (
+    matches(input, 'driver', 'conductor', 'chofer', 'available', 'dispatch', 'free', 'who is', 'quien', 'quién', 'disponible')
+  ) {
+    const drivers = await prisma.driver.findMany({ orderBy: { name: 'asc' }, take: 10 });
+    if (!drivers.length) return `No drivers on the roster.${OFFLINE_NOTE}`;
+    return 'Drivers:\n' + drivers.map(d => `${d.name} · ${d.status}`).join('\n') + OFFLINE_NOTE;
+  }
+
+  if (matches(input, 'vehicle', 'truck', 'fleet', 'camion', 'camión', 'flota', 'unidad')) {
+    const vehicles = await prisma.vehicle.findMany({ orderBy: { plate: 'asc' }, take: 10 });
+    if (!vehicles.length) return `No vehicles on the fleet.${OFFLINE_NOTE}`;
+    return (
+      'Fleet:\n' +
+      vehicles.map(v => `${v.plate} · ${v.make} ${v.model} · ${v.capacity}t · ${v.status}`).join('\n') +
+      OFFLINE_NOTE
+    );
   }
 
   return (
