@@ -1,3 +1,116 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── JARVIS HUD ──────────────────────────────────────────────────────────────
+   Visual system for the assistant screen: holographic cyan on deep navy, with
+   amber reserved for command authority and red for faults. Scoped under
+   .hud so none of it leaks into the standard TMS pages. */
+
+.hud {
+  --hud-cyan: #38e1ff;
+  --hud-dim: #1b6f8a;
+  --hud-amber: #ffb020;
+  --hud-red: #ff4d5e;
+  --hud-bg: #030a12;
+  color: var(--hud-cyan);
+  background-color: var(--hud-bg);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+/* Faint engineering grid + vignette behind everything. */
+.hud-grid {
+  background-image:
+    linear-gradient(rgba(56, 225, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 225, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.hud-vignette {
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(3, 10, 18, 0.92) 100%);
+}
+
+/* Corner brackets that make a plain div read as an instrument panel. */
+.hud-panel {
+  position: relative;
+  border: 1px solid rgba(56, 225, 255, 0.18);
+  background: linear-gradient(180deg, rgba(8, 30, 45, 0.55) 0%, rgba(4, 14, 22, 0.5) 100%);
+  backdrop-filter: blur(2px);
+}
+.hud-panel::before,
+.hud-panel::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-color: var(--hud-cyan);
+  opacity: 0.8;
+}
+.hud-panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+.hud-panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}
+
+.hud-glow { text-shadow: 0 0 8px rgba(56, 225, 255, 0.65); }
+.hud-glow-amber { text-shadow: 0 0 8px rgba(255, 176, 32, 0.7); }
+
+/* Scrollbars, so the log doesn't break the illusion. */
+.hud-scroll::-webkit-scrollbar { width: 6px; }
+.hud-scroll::-webkit-scrollbar-track { background: rgba(56, 225, 255, 0.05); }
+.hud-scroll::-webkit-scrollbar-thumb { background: rgba(56, 225, 255, 0.3); border-radius: 3px; }
+
+@keyframes hud-spin { to { transform: rotate(360deg); } }
+@keyframes hud-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes hud-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.04); }
+}
+@keyframes hud-scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { transform: translateY(2000%); opacity: 0; }
+}
+@keyframes hud-boot {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes hud-bar {
+  0%, 100% { transform: scaleY(0.25); }
+  50%      { transform: scaleY(1); }
+}
+@keyframes hud-blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0.15; }
+}
+
+.hud-spin-slow  { animation: hud-spin 24s linear infinite; transform-origin: center; }
+.hud-spin-med   { animation: hud-spin-rev 12s linear infinite; transform-origin: center; }
+.hud-spin-fast  { animation: hud-spin 3.2s linear infinite; transform-origin: center; }
+.hud-pulse      { animation: hud-pulse 2.4s ease-in-out infinite; }
+.hud-pulse-fast { animation: hud-pulse 0.9s ease-in-out infinite; }
+.hud-scanline   { animation: hud-scan 5s linear infinite; }
+.hud-boot       { animation: hud-boot 0.35s ease-out both; }
+.hud-blink      { animation: hud-blink 1.4s steps(1) infinite; }
+
+/* Voice waveform bars; each bar gets its own delay inline. */
+.hud-bar {
+  animation: hud-bar 0.7s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-spin-slow, .hud-spin-med, .hud-spin-fast,
+  .hud-pulse, .hud-pulse-fast, .hud-scanline,
+  .hud-boot, .hud-bar, .hud-blink {
+    animation: none;
+  }
+}

@@ -10,6 +10,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
     "@prisma/client": "^5.14.0",
     "cors": "^2.8.5",
     "express": "^4.19.2",

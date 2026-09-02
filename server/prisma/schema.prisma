@@ -96,3 +96,54 @@ model ShipmentEvent {
   location    String?
   createdAt   DateTime @default(now())
 }
+
+// ── AI layer ────────────────────────────────────────────────────────────────
+// JARVIS assistant + the agents it can forge. See src/ai/.
+
+model Agent {
+  id           String     @id @default(cuid())
+  name         String     @unique
+  role         String     // one-line job description, shown on the roster
+  systemPrompt String     // the agent's standing orders
+  tools        String     @default("[]") // JSON array of tool names it may call
+  model        String     @default("claude-opus-5")
+  status       String     @default("STANDBY") // STANDBY | ACTIVE | RETIRED
+  autonomy     String     @default("READ_ONLY") // READ_ONLY | COMMAND
+  createdBy    String     @default("OPERATOR") // OPERATOR | JARVIS
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  runs         AgentRun[]
+}
+
+model AgentRun {
+  id          String    @id @default(cuid())
+  agentId     String
+  agent       Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  input       String
+  output      String?
+  toolCalls   String    @default("[]") // JSON array of {name, input, ok}
+  status      String    @default("RUNNING") // RUNNING | COMPLETE | FAILED
+  error       String?
+  tokensIn    Int       @default(0)
+  tokensOut   Int       @default(0)
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+}
+
+model ChatSession {
+  id        String        @id @default(cuid())
+  title     String        @default("New session")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String      // user | assistant
+  content   String
+  toolCalls String      @default("[]") // JSON array of {name, input, ok}
+  createdAt DateTime    @default(now())
+}

@@ -5,6 +5,8 @@ import ordersRouter from './routes/orders';
 import shipmentsRouter from './routes/shipments';
 import fleetRouter from './routes/fleet';
 import dashboardRouter from './routes/dashboard';
+import assistantRouter from './routes/assistant';
+import agentsRouter from './routes/agents';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,6 +19,8 @@ app.use('/api/orders', ordersRouter);
 app.use('/api/shipments', shipmentsRouter);
 app.use('/api/fleet', fleetRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/assistant', assistantRouter);
+app.use('/api/agents', agentsRouter);
 
 app.listen(PORT, () => {
   console.log(`TMS server running on http://localhost:${PORT}`);

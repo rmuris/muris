@@ -6,6 +6,8 @@ import Shipments from './pages/Shipments';
 import ShipmentDetail from './pages/ShipmentDetail';
 import Fleet from './pages/Fleet';
 import Customers from './pages/Customers';
+import Jarvis from './pages/Jarvis';
+import Agents from './pages/Agents';
 
 export default function App() {
   return (
@@ -17,6 +19,8 @@ export default function App() {
         <Route path="/shipments/:id" element={<ShipmentDetail />} />
         <Route path="/fleet" element={<Fleet />} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/jarvis" element={<Jarvis />} />
+        <Route path="/agents" element={<Agents />} />
       </Route>
     </Routes>
   );

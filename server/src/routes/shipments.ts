@@ -1,18 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import prisma from '../db';
+import { assignShipment, setShipmentStatus, ShipmentError } from '../services/shipments';
 
 const router = Router();
-
-function generateTrackingNo() {
-  return `TRK-${Date.now().toString(36).toUpperCase()}`;
-}
-
-// Rough distance estimate (Haversine not needed for MVP — use straight-line km)
-function estimateRoute(origin: string, destination: string) {
-  // In a real TMS, call a routing API. For MVP, return placeholder values.
-  return { estimatedDist: Math.round(50 + Math.random() * 450), estimatedTime: Math.round(60 + Math.random() * 480) };
-}
 
 const AssignSchema = z.object({
   orderId: z.string(),
@@ -72,63 +63,28 @@ router.get('/track/:trackingNo', async (req, res) => {
 router.post('/assign', async (req, res) => {
   const parsed = AssignSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const { orderId, driverId, vehicleId, notes } = parsed.data;
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) return res.status(404).json({ error: 'Order not found' });
-
-  const { estimatedDist, estimatedTime } = estimateRoute(order.origin, order.destination);
-
-  const [shipment] = await prisma.$transaction([
-    prisma.shipment.create({
-      data: {
-        trackingNo: generateTrackingNo(),
-        orderId,
-        driverId,
-        vehicleId,
-        origin: order.origin,
-        destination: order.destination,
-        estimatedDist,
-        estimatedTime,
-        notes,
-        status: 'PENDING',
-      },
-      include: { order: { include: { customer: true } }, driver: true, vehicle: true },
-    }),
-    prisma.order.update({ where: { id: orderId }, data: { status: 'ASSIGNED' } }),
-    prisma.driver.update({ where: { id: driverId }, data: { status: 'ON_ROUTE' } }),
-    prisma.vehicle.update({ where: { id: vehicleId }, data: { status: 'IN_USE' } }),
-  ]);
-
-  res.status(201).json(shipment);
+  try {
+    const shipment = await assignShipment(parsed.data);
+    res.status(201).json(shipment);
+  } catch (err) {
+    if (err instanceof ShipmentError) return res.status(err.status).json({ error: err.message });
+    throw err;
+  }
 });
 
 // Update shipment status
 router.post('/:id/status', async (req, res) => {
   const parsed = StatusSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
-  const { status, note, location } = parsed.data;
 
-  const shipment = await prisma.shipment.findUnique({ where: { id: req.params.id } });
-  if (!shipment) return res.status(404).json({ error: 'Not found' });
-
-  const now = new Date();
-  const updates: Record<string, unknown> = { status };
-  if (status === 'PICKED_UP') updates.pickedUpAt = now;
-  if (status === 'DELIVERED') {
-    updates.deliveredAt = now;
-    // Free driver and vehicle
-    if (shipment.driverId) await prisma.driver.update({ where: { id: shipment.driverId }, data: { status: 'AVAILABLE' } });
-    if (shipment.vehicleId) await prisma.vehicle.update({ where: { id: shipment.vehicleId }, data: { status: 'AVAILABLE' } });
-    await prisma.order.update({ where: { id: shipment.orderId }, data: { status: 'DELIVERED' } });
+  try {
+    const updated = await setShipmentStatus(req.params.id, parsed.data);
+    res.json(updated);
+  } catch (err) {
+    if (err instanceof ShipmentError) return res.status(err.status).json({ error: err.message });
+    throw err;
   }
-
-  const [updated] = await prisma.$transaction([
-    prisma.shipment.update({ where: { id: req.params.id }, data: updates, include: { events: { orderBy: { createdAt: 'asc' } } } }),
-    prisma.shipmentEvent.create({ data: { shipmentId: req.params.id, status, note, location } }),
-  ]);
-
-  res.json(updated);
 });
 
 export default router;
